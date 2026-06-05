@@ -210,6 +210,29 @@
       color: #92400E;
     }
 
+    .reflection-block {
+      background: #F0FDF4;
+      border: 1px solid #BBF7D0;
+      border-radius: 10px;
+      padding: 14px;
+      margin: 10px 0;
+      white-space: pre-wrap;
+    }
+
+    .reflection-block strong {
+      color: #166534;
+    }
+
+    .reflection-question {
+      background: #FDF2F8;
+      border: 1px solid #FBCFE8;
+      border-radius: 10px;
+      padding: 14px;
+      margin: 10px 0;
+      font-weight: 700;
+      color: #9D174D;
+    }
+
     .error {
       background: #FEF2F2;
       color: #991B1B;
@@ -289,14 +312,31 @@
         <h2>③ 之卦解读</h2>
         <div id="relatingContent"></div>
       </div>
+
+      <div class="section">
+        <h2>④ 历史映照</h2>
+        <div id="historicalReflectionContent"></div>
+      </div>
+
+      <div class="section">
+        <h2>⑤ 反思问题</h2>
+        <div id="reflectionQuestionContent"></div>
+      </div>
     </div>
   </div>
+
+ // <script src="historical-reflections.js"></script>
+<script src="historical-reflections-part1.js"></script>
+<script src="historical-reflections-part2.js"></script>
+<script src="historical-reflections-part3.js"></script>
+<script src="historical-reflections-part4.js"></script>
 
   <script type="module">
     import IChingWilhelm from "https://cdn.jsdelivr.net/gh/adamblvck/iching-wilhelm-dataset@master/data/iching_wilhelm_translation.js";
 
     let dataset = null;
     let binaryToHex = {};
+    const historicalReflections = window.HISTORICAL_REFLECTIONS || {};
     let tosses = [];
     let isAnimating = false;
 
@@ -404,6 +444,44 @@
       `;
     }
 
+    function getReflection(hex) {
+      if (!hex) return null;
+      return historicalReflections[Number(hex.hex)] || null;
+    }
+
+    function renderHistoricalReflection(hex, role = "本卦") {
+      const reflection = getReflection(hex);
+      if (!reflection) {
+        return `<div class="reflection-block">暂未收录此卦的历史映照。</div>`;
+      }
+
+      return `
+        <div class="reflection-block">
+          <strong>${escapeHtml(role)}｜${escapeHtml(reflection.title)}</strong>
+
+
+          <strong>中文导读：</strong>
+${escapeHtml(reflection.guide || "")}
+
+
+          <strong>历史映照：</strong>
+${escapeHtml(reflection.story || "")}
+
+
+          <strong>人生启示：</strong>
+${escapeHtml(reflection.lesson || "")}
+        </div>
+      `;
+    }
+
+    function renderReflectionQuestion(hex) {
+      const reflection = getReflection(hex);
+      if (!reflection || !reflection.question) {
+        return `<div class="reflection-question">本卦暂无反思问题。</div>`;
+      }
+      return `<div class="reflection-question">${escapeHtml(reflection.question)}</div>`;
+    }
+
     function hexTitle(hex) {
       if (!hex) return "Unknown";
       return `Hexagram ${hex.hex}: ${hex.hex_font || ""} ${hex.english || ""} / ${hex.trad_chinese || ""} (${hex.pinyin || ""})`;
@@ -497,6 +575,15 @@
 
       document.getElementById("primaryContent").innerHTML = renderHexContent(primary, "primary");
       document.getElementById("relatingContent").innerHTML = renderHexContent(relating, "relating");
+      document.getElementById("historicalReflectionContent").innerHTML = `
+        ${renderHistoricalReflection(primary, "本卦")}
+        ${relating && primary && relating.hex !== primary.hex ? renderHistoricalReflection(relating, "之卦") : ""}
+      `;
+      document.getElementById("reflectionQuestionContent").innerHTML = `
+        <h3>本卦提问</h3>
+        ${renderReflectionQuestion(primary)}
+        ${relating && primary && relating.hex !== primary.hex ? `<h3>之卦提问</h3>${renderReflectionQuestion(relating)}` : ""}
+      `;
 
       const changingContainer = document.getElementById("changingLinesContent");
       changingContainer.innerHTML = "";
