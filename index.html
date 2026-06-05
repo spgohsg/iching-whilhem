@@ -445,10 +445,23 @@
       `;
     }
 
-    function getReflection(hex) {
-      if (!hex) return null;
-      return historicalReflections[Number(hex.hex)] || null;
-    }
+//    function getReflection(hex) {
+  //    if (!hex) return null;
+ //     return historicalReflections[Number(hex.hex)] || null;
+//    }
+
+function getReflection(hex) {
+  if (!hex) return null;
+
+  const possibleNumber =
+    Number(hex.hex) ||
+    Number(hex.number) ||
+    Number(hex.no) ||
+    Number(hex.id);
+
+  return historicalReflections[possibleNumber] || null;
+}
+    
 
     function renderHistoricalReflection(hex, role = "本卦") {
       const reflection = getReflection(hex);
@@ -470,7 +483,9 @@ ${escapeHtml(reflection.story || "")}
 
 
           <strong>人生启示：</strong>
-${escapeHtml(reflection.lesson || "")}
+//${escapeHtml(reflection.lesson || "")}
+${escapeHtml(reflection.guide || "")}
+
         </div>
       `;
     }
