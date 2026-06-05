@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>I Ching Wilhelm Oracle</title>
+  <title>易经 Wilhelm Oracle</title>
   <style>
     :root {
       --primary: #4F46E5;
@@ -197,6 +197,19 @@
       color: #111827;
     }
 
+    .zh-block {
+      background: #FFFBEB;
+      border: 1px solid #FDE68A;
+      border-radius: 10px;
+      padding: 14px;
+      margin: 10px 0;
+      white-space: pre-wrap;
+    }
+
+    .zh-block strong {
+      color: #92400E;
+    }
+
     .error {
       background: #FEF2F2;
       color: #991B1B;
@@ -209,17 +222,17 @@
 </head>
 <body>
   <div class="card">
-    <h1 class="center">☯ I Ching Wilhelm Oracle</h1>
+    <h1 class="center">☯ 易经 Wilhelm Oracle</h1>
     <p class="center muted">
-      Three coins, six tosses. Dataset loads once at startup and readings run from browser memory.
+      三枚硬币，六次投掷。Wilhelm 原文资料启动时载入一次；之后解读在浏览器内即时完成。
     </p>
 
-    <div id="loadStatus" class="status-box">Loading Wilhelm dataset...</div>
+    <div id="loadStatus" class="status-box">正在载入 Wilhelm 资料...</div>
     <div id="errorBox" class="error hidden"></div>
 
     <div id="oracleUI" class="hidden">
       <div class="status-box">
-        Toss <span id="tossNumber">1</span> / 6
+        第 <span id="tossNumber">1</span> / 6 次投币
       </div>
 
       <div class="coin-row" id="coinRow">
@@ -229,13 +242,13 @@
       </div>
 
       <div class="center">
-        <button id="tossBtn">Toss Three Coins</button>
-        <button id="resetBtn" class="danger">Reset</button>
+        <button id="tossBtn">投三枚硬币</button>
+        <button id="resetBtn" class="danger">重新开始</button>
       </div>
 
-      <div id="latestLine" class="center muted">No lines generated yet.</div>
+      <div id="latestLine" class="center muted">尚未生成爻。</div>
 
-      <h3>Growing Hexagram</h3>
+      <h3>当前卦象</h3>
       <div id="hexagramDisplay" class="hexagram-display">等待投币</div>
 
       <div id="lineHistory" class="line-history"></div>
@@ -243,17 +256,17 @@
 
     <div id="resultUI" class="hidden">
       <div class="section">
-        <h2>Reading Result</h2>
+        <h2>占卜结果</h2>
 
         <div class="result-grid">
           <div class="result-card center">
-            <h3>Primary Hexagram</h3>
+            <h3>本卦 Primary</h3>
             <div id="primarySymbol" class="big-symbol"></div>
             <div id="primaryTitle"></div>
           </div>
 
           <div class="result-card center">
-            <h3>Relating Hexagram</h3>
+            <h3>之卦 Relating</h3>
             <div id="relatingSymbol" class="big-symbol"></div>
             <div id="relatingTitle"></div>
           </div>
@@ -263,17 +276,17 @@
       </div>
 
       <div class="section">
-        <h2>① Primary Hexagram</h2>
+        <h2>① 本卦解读</h2>
         <div id="primaryContent"></div>
       </div>
 
       <div class="section">
-        <h2>② Changing Lines</h2>
+        <h2>② 变爻解读</h2>
         <div id="changingLinesContent"></div>
       </div>
 
       <div class="section">
-        <h2>③ Relating Hexagram</h2>
+        <h2>③ 之卦解读</h2>
         <div id="relatingContent"></div>
       </div>
     </div>
@@ -299,6 +312,110 @@
     const hexagramDisplay = document.getElementById("hexagramDisplay");
     const lineHistory = document.getElementById("lineHistory");
 
+    const linePositionGuide = {
+      1: "初爻在最下方，象征事情的起点、根基与潜伏状态。此处的提醒通常与准备、忍耐、不要急于行动有关。",
+      2: "二爻居下卦之中，象征开始显现、有人回应、可以寻找支持。此处的提醒常与合作、谦逊、适度表现有关。",
+      3: "三爻在下卦之上，常是压力、风险与转折的位置。此处提醒不要躁进，要看清局势再行动。",
+      4: "四爻进入上卦，象征靠近核心、进入新阶段。此处提醒观察时机，既不要退缩，也不要冒进。",
+      5: "五爻多为主位，象征成熟、领导、关键决定。此处通常是整卦中最重要的行动方向。",
+      6: "上爻在最上方，象征事情发展到极点或尾声。此处提醒过犹不及，需要收束、反省或转换方向。"
+    };
+
+    function chineseTheme(hex) {
+      const name = hex?.trad_chinese || hex?.english || "此卦";
+      const en = String(hex?.english || "").toLowerCase();
+      const mapping = [
+        ["creative", "刚健、开创、主动、自强不息。现在的关键是承担责任、发挥创造力，但不可刚愎自用。"],
+        ["receptive", "柔顺、承载、配合、顺势而行。此时宜先接纳现实、稳定根基，再等待合适时机。"],
+        ["difficulty", "初始困难、混乱中的生机。事情刚开始会有阻力，宜整理资源，耐心建立秩序。"],
+        ["youthful", "启蒙、学习、请教。此时不宜自以为是，应以谦虚态度寻找正确方法。"],
+        ["waiting", "等待、养势、不可强求。时机未到时，最重要的是守住方向和信心。"],
+        ["conflict", "争执、分歧、立场冲突。宜止争、求公正，不宜把矛盾推到极端。"],
+        ["army", "组织、纪律、集体行动。此卦提醒要有清楚目标，也要有可信任的带领者。"],
+        ["holding together", "亲比、结盟、归属。宜寻找价值一致的人，但也要分辨谁值得靠近。"],
+        ["taming power of the small", "小有积蓄、小力量的约束。事情不能一步到位，需要以细节、耐性、柔性影响来推进。"],
+        ["treading", "履行、谨慎行事、如履薄冰。面对强势环境，要保持礼度与清醒。"],
+        ["peace", "通泰、上下相交、顺利流通。此时适合推进合作，但仍要保持谦和。"],
+        ["standstill", "闭塞、不通、隔绝。宜守正避险，先停止无效消耗，等待局面松动。"],
+        ["fellowship", "同人、志同道合、共同目标。宜公开透明，团结真正有共同方向的人。"],
+        ["possession in great measure", "大有、资源丰盛、能量充足。此时可成大事，但要以德配位，不可骄矜。"],
+        ["modesty", "谦逊、低调、留有余地。越是在有能力时，越要懂得收敛与平衡。"],
+        ["enthusiasm", "豫、热情、动员、振奋。适合激发士气，但要避免空喊口号或过度兴奋。"],
+        ["following", "随顺、跟随趋势、顺应人心。重点在于选择值得跟随的方向。"],
+        ["work on what has been spoiled", "整顿旧弊、修复过去的问题。不要逃避遗留问题，清理之后才有新局。"],
+        ["approach", "临近、机会到来、影响力增强。宜主动接近，但要保持宽厚与长远眼光。"],
+        ["contemplation", "观察、审视、由高处看整体。此时先看清全局，再决定下一步。"],
+        ["biting through", "咬合、突破阻碍、依法处理。需要果断面对问题，不能任由障碍存在。"],
+        ["grace", "修饰、文采、外在形式。美化有其价值，但不可只重表面而失去实质。"],
+        ["splitting apart", "剥落、瓦解、基础受损。宜保守防守，先保护核心，不宜强行扩张。"],
+        ["return", "复归、重新开始、转机初现。微小的恢复已经出现，要珍惜回归正道的机会。"],
+        ["innocence", "无妄、自然、真诚、无私心。保持本真可避灾，妄动反而有害。"],
+        ["taming power of the great", "大畜、蓄养大力、积累实力。暂时收住力量，是为了之后更有力地行动。"],
+        ["corners of the mouth", "颐养、滋养、言语与饮食。要注意你吸收什么、说出什么，以及如何养成自己。"],
+        ["preponderance of the great", "大过、压力过重、结构失衡。关键在于承重而不崩，必要时要改变结构。"],
+        ["abysmal", "坎险、重复的险境、内在考验。保持诚信与冷静，逐步通过危险。"],
+        ["clinging", "离明、依附、光明、洞察。适合看清真相，但也要知道自己依附于什么。"],
+        ["influence", "感应、吸引、互相影响。关系与情感正在发挥作用，贵在真诚而非操控。"],
+        ["duration", "恒久、稳定、持续经营。不要只看一时热度，要建立可长可久的节奏。"],
+        ["retreat", "遁退、退让、避其锋芒。退不是失败，而是为了保存力量与主动权。"],
+        ["power of the great", "大壮、力量增长、声势强。越有力量，越要守礼守正。"],
+        ["progress", "晋升、前进、光明上升。适合展示成果，但不可浮躁冒进。"],
+        ["darkening", "明夷、光明受伤、处境不利。宜隐藏锋芒，保护内在信念。"],
+        ["family", "家人、内部秩序、角色责任。先理顺内部关系，外部事务才会稳定。"],
+        ["opposition", "睽违、差异、分歧。小事可同，大事须谨慎；关键是尊重不同。"],
+        ["obstruction", "蹇难、阻碍、行路艰难。不要硬闯，宜求助、绕路、调整策略。"],
+        ["deliverance", "解脱、释放、危机缓解。适合化解压力，但不要在放松后又制造新问题。"],
+        ["decrease", "损、减少、取舍。看似失去，可能是为了回到更合适的平衡。"],
+        ["increase", "益、增长、助益。适合给予、合作、扩张有益之事。"],
+        ["break-through", "夬、决断、公开处理。必须清楚表态，但不可带着暴烈之气。"],
+        ["coming to meet", "姤、相遇、突然而来的影响。要警觉新出现的人事物，分辨其力量。"],
+        ["gathering together", "萃聚、集合、凝聚。适合汇集人心与资源，但需要中心与秩序。"],
+        ["pushing upward", "升进、逐步上升。靠的是持续努力，不是突然跃升。"],
+        ["oppression", "困顿、受压、资源有限。言语未必有效，守住内在诚意更重要。"],
+        ["well", "井、供养、共同资源。问题不在资源是否存在，而在是否能正确汲取和维护。"],
+        ["revolution", "革、变革、更新。改变需要时机、正当性与清楚共识。"],
+        ["cauldron", "鼎、转化、承载新秩序。适合重组资源，让事物变得更有价值。"],
+        ["arousing", "震动、惊醒、突发事件。震动带来警醒，稳住之后反而能成长。"],
+        ["keeping still", "艮止、停止、定住。该停时停，才能看清界限和内心。"],
+        ["development", "渐进、循序发展。适合稳步推进，尤其重视过程与礼法。"],
+        ["marrying maiden", "归妹、关系中的位置与分寸。不可越位强求，应看清角色和条件。"],
+        ["abundance", "丰盛、光明、资源充足。盛极之时要防分散，也要想到之后的变化。"],
+        ["wanderer", "旅、漂泊、暂居。身处外地或不稳定处境时，宜谨慎守礼。"],
+        ["gentle", "巽入、柔顺渗透、渐渐影响。不要硬碰硬，以持续而细致的方式推进。"],
+        ["joyous", "兑悦、沟通、喜悦。适合交流与鼓励，但不要流于轻浮。"],
+        ["dispersion", "涣散、分离后的重聚。需要化解隔阂，让分散的力量重新归一。"],
+        ["limitation", "节制、界限、规则。适度的限制能保护秩序，过度限制则会窒息。"],
+        ["inner truth", "中孚、内在诚信、信任。真诚比技巧更重要，信任需要由内而外建立。"],
+        ["preponderance of the small", "小过、小事过度、谨慎微调。大事不宜冒进，小处反而见功夫。"],
+        ["after completion", "既济、事情已成、秩序初定。成功之后最怕松懈，要防止平衡被打破。"],
+        ["before completion", "未济、尚未完成、过渡阶段。事情还差最后整理，谨慎完成比急于结束更重要。"]
+      ];
+      const found = mapping.find(([key]) => en.includes(key));
+      return `${name}：${found ? found[1] : "此卦提示你观察当前局势的结构、时机与人心，再决定如何行动。"}`;
+    }
+
+    function renderChineseGuide(hex, role) {
+      if (!hex) return "";
+      const roleText = role === "primary" ? "本卦代表当前处境" : "之卦代表事情的后续走向";
+      return `
+        <div class="zh-block">
+          <strong>中文辅助解读｜${escapeHtml(roleText)}</strong>\n\n${escapeHtml(chineseTheme(hex))}\n\n建议：先看卦象所指出的主要气质，再结合卦辞与象辞。不要把它看成绝对预言，而应看成一面镜子：它提醒你此刻什么力量正在主导，以及应以什么态度回应。
+        </div>
+      `;
+    }
+
+    function renderChineseLineGuide(line) {
+      const changeMeaning = line.total === 6
+        ? "老阴为变爻，表示柔弱、退让或隐藏的状态正在转为主动、明确、外显。"
+        : "老阳为变爻，表示强势、主动或外放的状态正在转为收敛、柔化、内省。";
+
+      return `
+        <div class="zh-block">
+          <strong>中文辅助解读｜第 ${line.lineNumber} 爻</strong>\n\n${escapeHtml(linePositionGuide[line.lineNumber])}\n\n${escapeHtml(changeMeaning)}\n\n阅读此爻时，可把它看成整件事情的关键转折点：它指出哪里正在变化，也提示你应在那里调整态度或行动。
+        </div>
+      `;
+    }
+
     function initDataset() {
       dataset = IChingWilhelm;
       binaryToHex = {};
@@ -308,7 +425,7 @@
         binaryToHex[binary] = hex;
       });
 
-      loadStatus.innerText = "Dataset loaded. Ready.";
+      loadStatus.innerText = "资料已载入，可以开始。";
       oracleUI.classList.remove("hidden");
     }
 
@@ -353,8 +470,8 @@
         const row = document.createElement("div");
         row.className = "line-item";
         row.innerHTML = `
-          <span>Line ${i + 1}: ${t.symbol} ${t.label} (${t.total})</span>
-          <span class="badge ${t.changing ? "change" : ""}">${t.changing ? "Changing" : "Stable"}</span>
+          <span>第 ${i + 1} 爻: ${t.symbol} ${t.label} (${t.total})</span>
+          <span class="badge ${t.changing ? "change" : ""}">${t.changing ? "变爻" : "不变"}</span>
         `;
         lineHistory.appendChild(row);
       });
@@ -365,8 +482,8 @@
       isAnimating = false;
       tossNumber.innerText = "1";
       tossBtn.disabled = false;
-      tossBtn.innerText = "Toss Three Coins";
-      latestLine.innerText = "No lines generated yet.";
+      tossBtn.innerText = "投三枚硬币";
+      latestLine.innerText = "尚未生成爻。";
       coinRow.innerHTML = `<div class="coin">?</div><div class="coin">?</div><div class="coin">?</div>`;
       lineHistory.innerHTML = "";
       displayCurrentHexagram();
@@ -385,6 +502,7 @@
     function textBlock(title, text) {
       if (!text) return "";
       return `
+        ${renderChineseGuide(hex, role)}
         <div class="text-block">
           <strong>${escapeHtml(title)}</strong>\n\n${escapeHtml(text)}
         </div>
@@ -396,8 +514,8 @@
       return `Hexagram ${hex.hex}: ${hex.hex_font || ""} ${hex.english || ""} / ${hex.trad_chinese || ""} (${hex.pinyin || ""})`;
     }
 
-    function renderHexContent(hex) {
-      if (!hex) return `<div class="text-block">No data found.</div>`;
+    function renderHexContent(hex, role = "primary") {
+      if (!hex) return `<div class="text-block">找不到资料。</div>`;
 
       return `
         <div class="text-block">
@@ -436,27 +554,28 @@
       document.getElementById("relatingTitle").innerText = hexTitle(relating);
 
       if (changingLines.length === 0) {
-        document.getElementById("changingLinesSummary").innerText = "No changing lines. The relating hexagram is the same as the primary hexagram.";
+        document.getElementById("changingLinesSummary").innerText = "无变爻：之卦与本卦相同。";
       } else {
         document.getElementById("changingLinesSummary").innerText =
-          "Changing lines: " + changingLines.map(l => "Line " + l.lineNumber).join(", ");
+          "变爻：" + changingLines.map(l => "第 " + l.lineNumber + " 爻").join("、");
       }
 
-      document.getElementById("primaryContent").innerHTML = renderHexContent(primary);
-      document.getElementById("relatingContent").innerHTML = renderHexContent(relating);
+      document.getElementById("primaryContent").innerHTML = renderHexContent(primary, "primary");
+      document.getElementById("relatingContent").innerHTML = renderHexContent(relating, "relating");
 
       const changingContainer = document.getElementById("changingLinesContent");
       changingContainer.innerHTML = "";
 
       if (changingLines.length === 0) {
-        changingContainer.innerHTML = `<div class="text-block">There are no changing lines in this reading.</div>`;
+        changingContainer.innerHTML = `<div class="zh-block"><strong>中文辅助解读</strong>\n\n本次没有变爻，表示局势较为稳定。本卦与之卦相同，重点应放在本卦所呈现的整体处境，而不是某个突发转折。</div><div class="text-block">There are no changing lines in this reading.</div>`;
       } else {
         changingLines.forEach(line => {
           const lineData = primary?.wilhelm_lines?.[String(line.lineNumber)];
           changingContainer.innerHTML += `
+            ${renderChineseLineGuide(line)}
             <div class="text-block">
               <strong>Line ${line.lineNumber} — ${escapeHtml(line.label)} (${line.total})</strong>\n\n
-              ${escapeHtml(lineData?.text || "No line text found.")}\n\n
+              ${escapeHtml(lineData?.text || "找不到爻辞资料。")}\n\n
               ${escapeHtml(lineData?.comments || "")}
             </div>
           `;
@@ -474,7 +593,7 @@
       resultUI.classList.add("hidden");
 
       coinRow.innerHTML = `<div class="coin flipping">?</div><div class="coin flipping">?</div><div class="coin flipping">?</div>`;
-      latestLine.innerText = "Coins are turning...";
+      latestLine.innerText = "硬币翻转中...";
 
       await new Promise(resolve => setTimeout(resolve, 800));
 
@@ -488,7 +607,7 @@
         .map(c => `<div class="coin" title="${escapeHtml(c.text)}">${escapeHtml(c.label)}</div>`)
         .join("");
 
-      latestLine.innerText = `Line ${tosses.length}: ${line.symbol} ${line.label} (${total})${line.changing ? " — changing line" : ""}`;
+      latestLine.innerText = `第 ${tosses.length} 爻：${line.symbol} ${line.label} (${total})${line.changing ? " — 变爻" : ""}`;
 
       displayCurrentHexagram();
       updateLineHistory();
@@ -498,7 +617,7 @@
         tossBtn.disabled = false;
       } else {
         tossNumber.innerText = "6";
-        tossBtn.innerText = "Reading Complete";
+        tossBtn.innerText = "占卜完成";
         tossBtn.disabled = true;
         showResults();
       }
@@ -513,8 +632,8 @@
       initDataset();
     } catch (err) {
       console.error(err);
-      loadStatus.innerText = "Dataset failed to load.";
-      showError("Could not load the Wilhelm dataset. Check your internet connection or CDN access.");
+      loadStatus.innerText = "资料载入失败。";
+      showError("无法载入 Wilhelm 资料。请检查网络连接或 CDN 是否可访问。");
     }
   </script>
 </body>
