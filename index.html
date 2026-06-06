@@ -392,7 +392,7 @@
         return;
       }
 
-      // Lines are generated bottom to top, but displayed top to bottom.
+      
       const displayLines = [...tosses]
         .reverse()
         .map(t => t.symbol + (t.changing ? "  *" : ""));
