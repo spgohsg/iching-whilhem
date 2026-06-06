@@ -325,7 +325,7 @@
     </div>
   </div>
 
- // <script src="historical-reflections.js"></script>
+
 <script src="historical-reflections-part1.js"></script>
 <script src="historical-reflections-part2.js"></script>
 <script src="historical-reflections-part3.js"></script>
@@ -336,7 +336,7 @@
 
     let dataset = null;
     let binaryToHex = {};
- //   const historicalReflections = window.HISTORICAL_REFLECTIONS || {};
+
     const historicalReflections = window.historicalReflections || {};
     let tosses = [];
     let isAnimating = false;
@@ -445,10 +445,6 @@
       `;
     }
 
-//    function getReflection(hex) {
-  //    if (!hex) return null;
- //     return historicalReflections[Number(hex.hex)] || null;
-//    }
 
 function getReflection(hex) {
   if (!hex) return null;
@@ -483,7 +479,6 @@ ${escapeHtml(reflection.story || "")}
 
 
           <strong>人生启示：</strong>
-//  ${escapeHtml(reflection.lesson || "")}
 ${escapeHtml(reflection.guide || "")}
         </div>
      `;
